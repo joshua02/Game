@@ -16,10 +16,6 @@ include_directories("thirdParty/imgui")
 include_directories("thirdParty/stb")
 include_directories("thirdParty/tinyobjloader")
 
-# Vulkan
-find_package(Vulkan REQUIRED)
-include_directories("thirdParty/Vulkan/Include")
-
 file(GLOB IMGUI_SOURCES
     "${CMAKE_SOURCE_DIR}/thirdParty/imgui/*.cpp"
     "${CMAKE_SOURCE_DIR}/thirdParty/imgui/backends/imgui_impl_sdl3.cpp"
@@ -32,5 +28,13 @@ add_executable("Renderer" "src/triangle.cpp" ${IMGUI_SOURCES})
 # Macro for resources
 target_compile_definitions("Renderer" PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/")
 
-target_link_libraries("Renderer" PRIVATE "SDL3::SDL3" "Vulkan::Vulkan" "glm::glm")
+target_link_libraries("Renderer" PRIVATE "SDL3::SDL3" "glm::glm")
 
+
+# Vulkan
+find_package(Vulkan REQUIRED)
+if(Vulkan_FOUND)
+    message(STATUS "Found Vulkan: ${Vulkan_LIBRARY}")
+    include_directories(${Vulkan_INCLUDE_DIR})
+    target_link_libraries("Renderer" PRIVATE "Vulkan::Vulkan")
+endif()

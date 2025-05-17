@@ -1,1 +1,3 @@
-Vulkan SDK must be downloaded and added to thirdParty/Vulkan directory
+Vulkan SDK must be downloaded and installed:
+
+https://vulkan.lunarg.com/sdk/home
