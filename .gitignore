@@ -1,0 +1,6 @@
+
+thirdParty/*
+out/
+.vs/
+CMakeSettings.json
+resources/shaders/compile.bat
