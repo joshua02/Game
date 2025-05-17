@@ -11,7 +11,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 #set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
 #set(CMAKE_CXX_FLAGS_RELEASE_INIT "-Wall" "-O3")
 
-add_subdirectory("thirdParty/SDL" EXCLUDE_FROM_ALL)
+add_subdirectory("thirdParty/SDL3" EXCLUDE_FROM_ALL)
 add_subdirectory("thirdParty/glm" EXCLUDE_FROM_ALL)
 find_package(Vulkan REQUIRED)
 
