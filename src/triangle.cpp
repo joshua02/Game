@@ -16,6 +16,10 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
+#include "imgui.h"
+#include "backends/imgui_impl_sdl3.h"
+#include "backends/imgui_impl_vulkan.h"
+
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
@@ -155,6 +159,8 @@ public:
 	}
 private:
 
+	
+
 	SDL_Window* window;
 	bool running = true;
 	SDL_Event event;
@@ -203,6 +209,8 @@ private:
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 	std::vector<void*> uniformBuffersMapped;
 
+
+	VkDescriptorPool imguiDescriptorPool;
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
 
@@ -225,6 +233,8 @@ private:
 	VkImage colorImage;
 	VkDeviceMemory colorImageMemory;
 	VkImageView colorImageView;
+
+	ImGuiIO* io;
 
 	uint32_t currentFrame = 0;
 	void initWindow() {
@@ -269,11 +279,69 @@ private:
 		createDescriptorSets();
 		createCommandBuffers();
 		createSyncObjects();
+
+		initImGui();
+	}
+
+	void initImGui() {
+		VkDescriptorPoolSize pool_sizes[] =
+		{
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE },
+		};
+		VkDescriptorPoolCreateInfo pool_info = {};
+		pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		pool_info.maxSets = 0;
+		for (VkDescriptorPoolSize& pool_size : pool_sizes)
+			pool_info.maxSets += pool_size.descriptorCount;
+		pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+		pool_info.pPoolSizes = pool_sizes;
+		if (vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiDescriptorPool) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create imgui descriptor pool D:");
+		}
+
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		io = &ImGui::GetIO();
+
+		io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		io->ConfigFlags |= ImGuiConfigFlags_DockingEnable; //for docking
+		io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; //for multiple windows
+
+		ImGui::StyleColorsDark();
+		//ImGui::StyleColorsLight();
+
+		ImGuiStyle& style = ImGui::GetStyle();
+		if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			style.WindowRounding = 0.0f;
+			style.Colors[ImGuiCol_WindowBg].w = 1.0f; // <-- THIS fixes transparency
+		}
+
+
+		ImGui_ImplSDL3_InitForVulkan(window);
+
+		ImGui_ImplVulkan_InitInfo initInfo{};
+
+		initInfo.Instance = instance;
+		initInfo.PhysicalDevice = physicalDevice;
+		initInfo.Device = device;
+		initInfo.Queue = graphicsQueue;
+		initInfo.RenderPass = renderPass;
+		initInfo.DescriptorPool = imguiDescriptorPool;
+		initInfo.MinImageCount = 2; //?
+		initInfo.ImageCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		initInfo.ImageCount = static_cast<uint32_t>(swapChainImages.size());
+		initInfo.MSAASamples = msaaSamples;
+
+		ImGui_ImplVulkan_Init(&initInfo);
+
 	}
 
 	void mainLoop() {
 		while (running) {
 			while (SDL_PollEvent(&event)) {
+				ImGui_ImplSDL3_ProcessEvent(&event);
 				if (event.type == SDL_EVENT_KEY_DOWN ||
 					event.type == SDL_EVENT_QUIT) {
 					running = false;
@@ -301,7 +369,6 @@ private:
 		VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			std::cout << "ducking in VK_ERROR_OUT_OF_DATE_KHR" << std::endl;
 			recreateSwapChain();
 			return;
 		}
@@ -317,6 +384,8 @@ private:
 		recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
 		
+
+
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -365,6 +434,10 @@ private:
 
 	void cleanup() {
 
+		ImGui_ImplVulkan_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
+		ImGui::DestroyContext();
+
 		cleanupSwapChain();
 
 		vkDestroySampler(device, textureSampler, nullptr);
@@ -379,6 +452,7 @@ private:
 		}
 
 		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+		vkDestroyDescriptorPool(device, imguiDescriptorPool, nullptr);
 
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
@@ -1215,8 +1289,29 @@ private:
 
 
 		//vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+		
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::SetNextWindowBgAlpha(1.0f);
+		
+
+		ImGui::Begin("Window");
+		ImGui::Text("Hello World");
+		ImGui::End();
+
+		ImGui::ShowDemoWindow();
+
+		ImGui::Render();
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+
 
 		vkCmdEndRenderPass(commandBuffer);
+
+		
 
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer D:");

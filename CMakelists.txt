@@ -10,8 +10,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 add_subdirectory("thirdParty/SDL3" EXCLUDE_FROM_ALL)
 add_subdirectory("thirdParty/glm" EXCLUDE_FROM_ALL)
 
-
-
 include_directories("thirdParty/imgui")
 include_directories("thirdParty/stb")
 include_directories("thirdParty/tinyobjloader")
@@ -31,10 +29,18 @@ target_compile_definitions("Renderer" PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOU
 target_link_libraries("Renderer" PRIVATE "SDL3::SDL3" "glm::glm")
 
 
+# Imgui Example
+add_executable("ImguiExample" "src/imgui_example.cpp" ${IMGUI_SOURCES})
+target_link_libraries("ImguiExample" PRIVATE "SDL3::SDL3")
+
+
+
 # Vulkan
 find_package(Vulkan REQUIRED)
 if(Vulkan_FOUND)
     message(STATUS "Found Vulkan: ${Vulkan_LIBRARY}")
     include_directories(${Vulkan_INCLUDE_DIR})
     target_link_libraries("Renderer" PRIVATE "Vulkan::Vulkan")
+    target_link_libraries("ImguiExample" PRIVATE "Vulkan::Vulkan")
 endif()
+
