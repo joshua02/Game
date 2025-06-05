@@ -4,6 +4,4 @@ out/
 CMakeSettings.json
 resources/shaders/compile.bat
 
-thirdParty/Vulkan/*
-
 *.spv
